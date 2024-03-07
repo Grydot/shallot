@@ -1,7 +1,0 @@
-{
-  "label":       "Shallot",
-  "icon":        "res/icon.png",
-  "iconsel":     "",
-  "launch":      "launch.sh",
-  "description": "Download Totally Legal ROMs"
-}
