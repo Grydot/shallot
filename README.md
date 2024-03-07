@@ -1,4 +1,4 @@
-# Shallot
+# Shallot ![](Shallot/res/icon.png)
 A ROM downloader app for Onion / MM+.
 Build entirely in Shell relying on nothing more than a stock Onion install.
 
