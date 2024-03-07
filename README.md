@@ -18,3 +18,6 @@ Run Shallot from the Apps menu.
 *Add more consoles
 
 *Add transfer location options
+
+
+Feel free to fork and make it not suck.
