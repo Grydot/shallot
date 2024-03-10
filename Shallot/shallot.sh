@@ -2,7 +2,7 @@
 
 # Program details
 PROGRAM_NAME="Shallot"
-VERSION="0.0.2"
+VERSION="0.0.4"
 RSYNC_SERVER="rsync.myrient.erista.me"
 REMOTE_DIR="files/No-Intro/Nintendo - Game Boy Advance/"
 SCRIPT_DIR=$(dirname "$0")
@@ -35,46 +35,6 @@ fetch_files() {
     fi
 }
 
-# Function to download ROMs
-download_roms() {
-    if ! fetch_files; then
-        echo "Retry fetching file list..."
-        return
-    fi
-
-    local choice
-    while true; do
-        display_file_list
-        printf "Enter the file number to download (or 'q' to quit): "
-        read choice
-        case $choice in
-            q)
-                echo "Exiting..."
-                return
-                ;;
-            *[!0-9]*)
-                echo "Invalid selection. Please enter a number."
-                ;;
-            *)
-                local selected_file=$(awk "NR==$choice" "$FILE_LIST")
-                if [ -z "$selected_file" ]; then
-                    echo "Invalid file number. Please try again."
-                else
-                    mkdir -p "$ROMS_DIR"
-                    rsync "rsync://$RSYNC_SERVER/$REMOTE_DIR$selected_file" "$ROMS_DIR/"
-                    echo "File '$selected_file' downloaded successfully to '$ROMS_DIR'."
-                    unzip -q "$ROMS_DIR/$selected_file" -d "$ROMS_DIR/"
-                    echo "File '$selected_file' unzipped successfully."
-                    rm -f "$ROMS_DIR/$selected_file"
-                    echo "File '$selected_file' deleted."
-                    read -n 1 -s -r -p "Press any key to continue..."
-                    return
-                fi
-                ;;
-        esac
-    done
-}
-
 # Function to display the full file list
 display_file_list() {
     clear
@@ -83,11 +43,87 @@ display_file_list() {
     echo "q. Quit"
 }
 
+# Function to display search results
+display_search_results() {
+    clear
+    echo "=== Search Results ==="
+    awk '{print NR ". " $0}' "$SCRIPT_DIR/search_results.txt"
+    echo "q. Quit"
+}
+
+# Function to download ROMs
+download_roms() {
+    if ! fetch_files; then
+        echo "Retry fetching file list..."
+        return
+    fi
+
+    # Delete search results upon first start
+    rm -f "$SCRIPT_DIR/search_results.txt"
+
+    local choice
+    local search_term=""
+    local display_search=false
+    while true; do
+        if [ -s "$SCRIPT_DIR/search_results.txt" ]; then
+            display_search=true
+            display_search_results
+        else
+            display_file_list
+        fi
+        printf "Enter the file number to download, 's' to search, or 'q' to quit: "
+        read choice
+        case $choice in
+            q)
+                echo "Exiting..."
+                return
+                ;;
+            s)
+                printf "Enter search term: "
+                read search_term
+                if [ -z "$search_term" ]; then
+                    echo "Search term cannot be empty."
+                    continue
+                fi
+                grep -i "$search_term" "$FILE_LIST" > "$SCRIPT_DIR/search_results.txt"
+                ;;
+            *[!0-9]*)
+                echo "Invalid selection. Please enter a number, 's' to search, or 'q' to quit."
+                ;;
+            *)
+                if [ "$display_search" = true ]; then
+                    selected_file=$(awk "NR==$choice" "$SCRIPT_DIR/search_results.txt")
+                else
+                    selected_file=$(awk "NR==$choice" "$FILE_LIST")
+                fi
+                if [ -z "$selected_file" ]; then
+                    echo "Invalid file number. Please try again."
+                else
+                    mkdir -p "$ROMS_DIR"
+                    # Integrate rsync progress here
+                    echo "Downloading '$selected_file' to '$ROMS_DIR'..."
+                    rsync --progress "rsync://$RSYNC_SERVER/$REMOTE_DIR$selected_file" "$ROMS_DIR/"
+                    echo "File '$selected_file' downloaded successfully to '$ROMS_DIR'."
+                    unzip -q "$ROMS_DIR/$selected_file" -d "$ROMS_DIR/"
+                    echo "File '$selected_file' unzipped successfully."
+                    rm -f "$ROMS_DIR/$selected_file"
+                    echo "File '$selected_file' deleted."
+                    # Reset search results and search term after successful download
+                    rm -f "$SCRIPT_DIR/search_results.txt"
+                    search_term=""
+                    read -n 1 -s -r -p "Press any key to continue..."
+                    return
+                fi
+                ;;
+        esac
+    done
+}
 
 # Function for Transfer menu option
 transfer() {
     echo "Transfer option selected."
     echo "Listing downloaded ROMs..."
+    local current_dir=$(pwd)  # Store the current directory
     cd "$ROMS_DIR" || { echo "Failed to access ROMs directory."; return; }
     local rom_files
     rom_files=$(find . -maxdepth 1 -type f -exec basename {} \;)
@@ -109,6 +145,7 @@ transfer() {
             echo "Transfer canceled."
         fi
     fi
+    cd "$current_dir"  # Return to the original directory
     read -n 1 -s -r -p "Press any key to continue..."
 }
 
