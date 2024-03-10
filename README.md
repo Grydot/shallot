@@ -13,11 +13,11 @@ Extract Shallot folder into Apps folder on SD card.
 Run Shallot from the Apps menu.
 
 ### To-Do:
-*Search Function
-
-*Add more consoles
-
-*Add transfer location options
+* ~~Search Function~~
+* Auto update
+* Add more consoles
+* Add transfer location options
+* GUI
 
 
 Feel free to fork and make it not suck.
